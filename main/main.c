@@ -120,16 +120,38 @@ void button_task()
 // Separate task to read sticks.
 // This is essential to have as a separate component as ADC scans typically take more time and this is only
 // scanned once between each polling interval. This varies from core to core.
+// Separate task to read sticks.
 void stick_task()
 {
-    //const char* TAG = "stick_task";
-    // read stick 1 and 2
-
-    g_stick_data.lsx = (uint16_t) adc1_get_raw(ADC_STICK_LX);
+    // read stick 1 and 2 raw values
+    g_stick_data.lsx = (uint16_t) 4095-adc1_get_raw(ADC_STICK_LX);
     g_stick_data.lsy = (uint16_t) adc1_get_raw(ADC_STICK_LY);
-    g_stick_data.rsx = (uint16_t) adc1_get_raw(ADC_STICK_RX);
+    g_stick_data.rsx = (uint16_t) 4095-adc1_get_raw(ADC_STICK_RX);
     g_stick_data.rsy = (uint16_t) adc1_get_raw(ADC_STICK_RY);
 
+    // --- START DEADZONE FILTER ---
+    uint16_t deadzone = 1000; // Increase this if it still drifts, decrease if it feels unresponsive
+    uint16_t center = 2048;  // 2048 is the perfect center of a 4095 scale
+
+    // Filter Left Stick
+    if (g_stick_data.lsx > (center - deadzone) && g_stick_data.lsx < (center + deadzone)) {
+        g_stick_data.lsx = center;
+    }
+    if (g_stick_data.lsy > (center - deadzone) && g_stick_data.lsy < (center + deadzone)) {
+        g_stick_data.lsy = center;
+    }
+
+    // Filter Right Stick
+    if (g_stick_data.rsx > (center - deadzone) && g_stick_data.rsx < (center + deadzone)) {
+        g_stick_data.rsx = center;
+    }
+    if (g_stick_data.rsy > (center - deadzone) && g_stick_data.rsy < (center + deadzone)) {
+        g_stick_data.rsy = center;
+    }
+    // --- END DEADZONE FILTER ---
+
+    // The un-ignorable print command
+    ESP_LOGI("JOYSTICK_TEST", "Left X: %d | Left Y: %d", g_stick_data.lsx, g_stick_data.lsy);
     return;
 }
 
